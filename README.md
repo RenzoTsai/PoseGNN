@@ -1,5 +1,5 @@
 # Hand Gesture Recognition with Pose Graph Neural Network
-This project is a Python implementation of a pose graph neural network for hand gesture recognition using the MediaPipe Hand Landmarks model.
+This project is a Python implementation of a pose graph neural network for hand gesture recognition using the MediaPipe Hand Landmarks model and GNN network.
 
 ## Installation
 1. Clone this repository: `git clone https://github.com/RenzoTsai/PoseGNN.git`
