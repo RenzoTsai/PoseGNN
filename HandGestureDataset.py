@@ -3,19 +3,18 @@ import mediapipe as mp
 import pickle
 
 joint_names = ["Wrist", "Thumb CMC", "Thumb MCP", "Thumb IP", "Thumb Tip",
-                            "Index MCP", "Index PIP", "Index DIP", "Index Tip",
-                            "Middle MCP", "Middle PIP", "Middle DIP", "Middle Tip",
-                            "Ring MCP", "Ring PIP", "Ring DIP", "Ring Tip",
-                            "Little MCP", "Little PIP", "Little DIP", "Little Tip"]
-
+               "Index MCP", "Index PIP", "Index DIP", "Index Tip",
+               "Middle MCP", "Middle PIP", "Middle DIP", "Middle Tip",
+               "Ring MCP", "Ring PIP", "Ring DIP", "Ring Tip",
+               "Little MCP", "Little PIP", "Little DIP", "Little Tip"]
 
 node_list = [
-            [0, 1], [1, 2], [2, 3], [3, 4],  # Thumb
-            [0, 5], [5, 6], [6, 7], [7, 8],  # Index finger
-            [0, 9], [9, 10], [10, 11], [11, 12],  # Middle finger
-            [0, 13], [13, 14], [14, 15], [15, 16],  # Ring finger
-            [0, 17], [17, 18], [18, 19], [19, 20]  # Little finger
-        ]
+    [0, 1], [1, 2], [2, 3], [3, 4],  # Thumb
+    [0, 5], [5, 6], [6, 7], [7, 8],  # Index finger
+    [0, 9], [9, 10], [10, 11], [11, 12],  # Middle finger
+    [0, 13], [13, 14], [14, 15], [15, 16],  # Ring finger
+    [0, 17], [17, 18], [18, 19], [19, 20]  # Little finger
+]
 
 
 class HandGestureDataset:
@@ -25,7 +24,6 @@ class HandGestureDataset:
         options = mp.tasks.vision.HandLandmarkerOptions(base_options=base_options,
                                                         num_hands=1)
         self.detector = mp.tasks.vision.HandLandmarker.create_from_options(options)
-
 
     def get_joint_points(self, image_path):
         image = mp.Image.create_from_file(image_path)
