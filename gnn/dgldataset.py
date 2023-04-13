@@ -21,109 +21,67 @@ LABELS = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 
           'w', 'x', 'y', 'z', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9']
 
 
-class HandGraph(dgl.DGLGraph):
-    def __init__(self, joints, node_list):
-        """
-        Define a DGL graph for each hand skeleton
-        """
-        super().__init__()
+def load_dataset():
+    """
+    Dataset:
+        number of graphs / images: 1619
+        number of columns: 2 - nodes (21) and labels (1)?
+        number of nodes/vertices on each hand: 21
+        number of features on each node: 3 (x, y, z)
+    """
 
-        # Add nodes for each joint
-        if node_list is None:
-            node_list = [0, 1]
-        self.add_nodes(len(joints))
+    # Get the path to the project directory
+    project_dir = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
 
-        # Add edges for each connection between joints
-        src, dst = zip(*node_list)
-        self.add_edges(src, dst)
+    # Load the dataset
+    pickle_path = os.path.join(project_dir, 'dataset', 'asl_dataset.pickle')
 
-        # Set node features to be the joint positions
-        self.ndata['pos'] = torch.from_numpy(np.array(joints))
-        # self.ndata['pos'] = torch.tensor(joints)
+    with open(pickle_path, 'rb') as f:
+        asl_dataset = pickle.load(f)
+    return asl_dataset
 
 
-class HandDataset(DGLDataset):
+class HandGestureDataset(DGLDataset):
     def __init__(self):
-        super().__init__(name='HandDataset')
+        super().__init__(name='HandGestureDataset')
 
-        self.graphs = []
+        self.graphs = None
+        self.labels = None
 
     def process(self):
         # Load the dataset
-        asl_dataset = self.load_dataset()
+        asl_dataset = load_dataset()
+        self.graphs, self.labels = [], []
 
-        # Get the unique labels
+        # Edges - constant edges for all graphs
+        src, dst = zip(*NODE_LIST)
+        edges_src = torch.from_numpy(np.asarray(src))
+        edges_dst = torch.from_numpy(np.asarray(dst))
+
+        # Graph labels
         unique_labels = np.unique(LABELS)
 
-        # Create a graph for each hand skeleton
-        graphs = []
-        for hand_data in asl_dataset:
-            joints = hand_data[0]
-            label = hand_data[1]
+        # For each graphs
+        for i, (joints_data, label) in enumerate(asl_dataset):
+            # Create a graph
+            g = dgl.graph((edges_src, edges_dst), num_nodes=len(joints_data))
+            # Add node features
+            g.ndata['feat'] = torch.from_numpy(np.array(joints_data))
 
+            # Add graph labels
             # Convert label to one-hot encoding
-            label_one_hot = np.zeros(len(unique_labels))
             label_index = np.where(unique_labels == label)[0][0]
+            label_one_hot = np.zeros(len(unique_labels))
             label_one_hot[label_index] = 1
 
-            # # Create a graph
-            # graph = HandGraph(joints, np.array(NODE_LIST))
-            # graph.ndata['label'] = torch.from_numpy(label_one_hot)
-            #
-            # # Add the graph to the list
-            # self.graphs.append(graph)
+            self.graphs.append(g)
+            self.labels.append(label_one_hot)
 
-            # Create a graph
-            graph = dgl.DGLGraph()
-            num_nodes = torch.from_numpy(np.array(joints)).shape[0]
-            graph.add_nodes(num_nodes)
-            graph.ndata['h'] = torch.from_numpy(np.array(joints))
-            # graph.ndata['label'] = torch.from_numpy(label_one_hot)
-
-            # Keep track of node IDs and corresponding labels
-            node_ids = []
-            labels = []
-            for i in range(num_nodes):
-                if label[i] != "":
-                    node_ids.append(i)
-                    labels.append(label_one_hot)
-
-            # Add edges to the graph
-            for i in range(num_nodes):
-                for j in range(num_nodes):
-                    if i != j:
-                        graph.add_edge(i, j)
-
-            # Set node labels for the nodes with labels
-            graph.ndata['label'][node_ids] = torch.from_numpy(np.array(labels))
-
-            graphs.append(graph)
-
-        self.graphs = graphs
-
+        # Convert the labels to a tensor for saving
+        self.labels = torch.from_numpy(np.array(self.labels))
 
     def __getitem__(self, idx):
-        return self.graphs[idx]
+        return self.graphs[idx], self.labels[idx]
 
     def __len__(self):
         return len(self.graphs)
-
-    @staticmethod
-    def load_dataset():
-        """
-        Dataset:
-            number of graphs / images: 1619
-            number of columns: 2 - nodes (21) and labels (1)?
-            number of nodes/vertices on each hand: 21
-            number of features on each node: 3 (x, y, z)
-        """
-
-        # Get the path to the project directory
-        project_dir = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
-
-        # Load the dataset
-        pickle_path = os.path.join(project_dir, 'dataset', 'asl_dataset.pickle')
-
-        with open(pickle_path, 'rb') as f:
-            asl_dataset = pickle.load(f)
-        return asl_dataset
