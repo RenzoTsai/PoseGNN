@@ -45,8 +45,13 @@ class HandGestureDataset(DGLDataset):
     def __init__(self):
         super().__init__(name='HandGestureDataset')
 
+        # Initialize the graphs and labels for dataset
         self.graphs = None
         self.labels = None
+        self.num_classes = None
+
+        # Process the dataset
+        self.process()
 
     def process(self):
         # Load the dataset
@@ -60,6 +65,7 @@ class HandGestureDataset(DGLDataset):
 
         # Graph labels
         unique_labels = np.unique(LABELS)
+        self.num_classes = len(unique_labels)
 
         # For each graphs
         for i, (joints_data, label) in enumerate(asl_dataset):
@@ -80,8 +86,8 @@ class HandGestureDataset(DGLDataset):
         # Convert the labels to a tensor for saving
         self.labels = torch.from_numpy(np.array(self.labels))
 
-    def __getitem__(self, idx):
-        return self.graphs[idx], self.labels[idx]
+    def __getitem__(self, i):
+        return self.graphs[i], self.labels[i]
 
     def __len__(self):
         return len(self.graphs)
