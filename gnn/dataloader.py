@@ -41,7 +41,12 @@ class HandGestureDataLoader:
         self.test_dataset = Subset(dataset, test_indices)
         self.val_dataset = Subset(dataset, val_indices)
 
-        print(train_indices[:10])
+        # Modify the node feature dimensionality for batched graphs
+        for g in self.dataset.graphs:
+            num_nodes = g.ndata['feat'].shape[0]
+            num_node_features = g.ndata['feat'].shape[1]
+            # g.ndata['feat'] = g.ndata['feat'].view(-1, num_nodes*num_node_features)
+            # g.ndata['feat'] = g.ndata['feat'].transpose(0, 1).reshape(num_nodes * num_node_features, -1)
 
     @staticmethod
     def collate(batch):

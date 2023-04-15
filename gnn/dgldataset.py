@@ -49,6 +49,7 @@ class HandGestureDataset(DGLDataset):
         self.graphs = None
         self.labels = None
         self.num_classes = None
+        self.num_node_features = 3
 
         # Process the dataset
         self.process()
@@ -72,7 +73,7 @@ class HandGestureDataset(DGLDataset):
             # Create a graph
             g = dgl.graph((edges_src, edges_dst), num_nodes=len(joints_data))
             # Add node features
-            g.ndata['feat'] = torch.from_numpy(np.array(joints_data))
+            g.ndata['feat'] = torch.from_numpy(np.array(joints_data).astype(np.float32))
 
             # Add graph labels
             # Convert label to one-hot encoding

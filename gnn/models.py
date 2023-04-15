@@ -1,61 +1,55 @@
 import torch
-from torch.nn import Linear, Sequential, BatchNorm1d, ReLU, Dropout
+import torch.nn as nn
 import torch.nn.functional as F
-from torch_geometric.nn import GCNConv, GINConv, GATConv, SAGEConv
-from torch_geometric.nn import global_mean_pool, global_add_pool
+
+import dgl
+from dgl import DGLGraph
+
+dgl.load_backend('pytorch')
+from dgl.nn.pytorch import conv as dgl_conv
+
+import numpy as np
 
 
-class GCN(torch.nn.Module):
-    def __init__(self, in_channels, hidden_channels, out_channels):
-        super(GCN, self).__init__()
-        self.conv1 = GCNConv(in_channels, hidden_channels)
-        self.conv2 = GCNConv(hidden_channels, out_channels)
+class GraphSAGEModel(nn.Module):
+    def __init__(self,
+                 in_feats,
+                 n_hidden,
+                 out_dim,
+                 n_layers,
+                 activation,
+                 dropout,
+                 aggregator_type):
+        """ Ref https://github.com/dglai/WWW20-Hands-on-Tutorial/blob/master/_legacy/basic_apps/BasicTasks_pytorch.ipynb """
+        super(GraphSAGEModel, self).__init__()
+        self.layers = nn.ModuleList()
 
-    def forward(self, x, edge_index, batch):
-        x = self.conv1(x, edge_index)
-        x = x.relu()
-        x = self.conv2(x, edge_index)
-        return global_mean_pool(x, batch), x
+        # input layer
+        self.layers.append(dgl_conv.SAGEConv(in_feats, n_hidden, aggregator_type, feat_drop=dropout, activation=activation))
+        # hidden layers
+        for i in range(n_layers - 1):
+            self.layers.append(dgl_conv.SAGEConv(n_hidden, n_hidden, aggregator_type, feat_drop=dropout, activation=activation))
+        # output layer
+        self.layers.append(dgl_conv.SAGEConv(n_hidden, out_dim, aggregator_type, feat_drop=dropout, activation=None))
 
-
-class GIN(torch.nn.Module):
-    def __init__(self, in_channels, hidden_channels, out_channels):
-        super(GIN, self).__init__()
-        nn1 = Sequential(Linear(in_channels, hidden_channels), ReLU(), Linear(hidden_channels, hidden_channels))
-        self.conv1 = GINConv(nn1)
-        nn2 = Sequential(Linear(hidden_channels, hidden_channels), ReLU(), Linear(hidden_channels, out_channels))
-        self.conv2 = GINConv(nn2)
-
-    def forward(self, x, edge_index, batch):
-        x = self.conv1(x, edge_index)
-        x = x.relu()
-        x = F.dropout(x, p=0.5, training=self.training)
-        x = self.conv2(x, edge_index)
-        return global_add_pool(x, batch), x
-
-
-class GAT(torch.nn.Module):
-    def __init__(self, in_channels, hidden_channels, out_channels):
-        super(GAT, self).__init__()
-        self.conv1 = GATConv(in_channels, hidden_channels, heads=8, dropout=0.6)
-        self.conv2 = GATConv(hidden_channels * 8, out_channels, dropout=0.6)
-
-    def forward(self, x, edge_index, batch):
-        x = F.elu(self.conv1(x, edge_index))
-        x = F.dropout(x, p=0.5, training=self.training)
-        x = self.conv2(x, edge_index)
-        return global_mean_pool(x, batch), x
+    def forward(self, g, features):
+        h = features
+        for layer in self.layers:
+            h = layer(g, h)
+        # sum up the node embeddings and output a single graph-level prediction
+        g.ndata['h'] = h
+        hg = dgl.mean_nodes(g, 'h')
+        return hg
 
 
-class GraphSAGE(torch.nn.Module):
-    def __init__(self, in_channels, hidden_channels, out_channels):
-        super(GraphSAGE, self).__init__()
-        self.conv1 = SAGEConv(in_channels, hidden_channels)
-        self.conv2 = SAGEConv(hidden_channels, out_channels)
+class GraphClassificationModel(nn.Module):
+    def __init__(self, in_feats, n_hidden, out_dim, n_layers, activation, dropout, aggregator_type):
+        super(GraphClassificationModel, self).__init__()
+        self.sage = GraphSAGEModel(in_feats, n_hidden, out_dim, n_layers, activation, dropout, aggregator_type)
+        self.fc = nn.Linear(out_dim, 1)
 
-    def forward(self, x, edge_index, batch):
-        x = self.conv1(x, edge_index)
-        x = x.relu()
-        x = F.dropout(x, p=0.5, training=self.training)
-        x = self.conv2(x, edge_index)
-        return global_mean_pool(x, batch), x
+    def forward(self, g, features):
+        h = self.sage(g, features)
+        h = dgl.mean_nodes(h, 'h')
+        out = self.fc(h)
+        return out.squeeze()
