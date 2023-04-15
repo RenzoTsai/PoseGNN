@@ -1,5 +1,7 @@
 import random
 import numpy as np
+import dgl
+import torch
 from torch.utils.data import DataLoader, Subset, SubsetRandomSampler
 
 
@@ -33,11 +35,18 @@ class HandGestureDataLoader:
         self.test_dataset = Subset(dataset, test_indices)
         self.val_dataset = Subset(dataset, val_indices)
 
+    @staticmethod
+    def collate(batch):
+        graphs, labels = zip(*batch)
+        batched_graph = dgl.batch(graphs)
+        batched_labels = torch.stack(labels).type(torch.float32)  # convert to float32
+        return batched_graph, batched_labels
+
     def get_train_loader(self):
-        return DataLoader(self.train_dataset, batch_size=self.batch_size, shuffle=self.shuffle)
+        return DataLoader(self.train_dataset, batch_size=self.batch_size, shuffle=self.shuffle, collate_fn=self.collate)
 
     def get_test_loader(self):
-        return DataLoader(self.test_dataset, batch_size=self.batch_size, shuffle=False)
+        return DataLoader(self.test_dataset, batch_size=self.batch_size, shuffle=False, collate_fn=self.collate)
 
     def get_val_loader(self):
-        return DataLoader(self.val_dataset, batch_size=self.batch_size, shuffle=False)
+        return DataLoader(self.val_dataset, batch_size=self.batch_size, shuffle=False, collate_fn=self.collate)
