@@ -24,16 +24,24 @@ class HandGestureDataLoader:
 
         # Split dataset into train, test, and validation sets
         dataset_size = len(self.dataset)
-        indices = list(range(dataset_size))
+
+        # Generate a random permutation of indices
+        np.random.seed(random_seed)
+        random_indices = np.random.permutation(dataset_size)
+
         split_1 = int(np.floor(self.test_split * dataset_size))
         split_2 = int(np.floor(self.val_split * dataset_size))
 
-        test_indices, val_indices, train_indices = indices[:split_1], indices[split_1:(split_1+split_2)], indices[(split_1+split_2):]
+        test_indices, val_indices, train_indices = random_indices[:split_1], \
+            random_indices[split_1:(split_1+split_2)], \
+            random_indices[(split_1+split_2):]
 
         # Define the sample for each set
         self.train_dataset = Subset(dataset, train_indices)
         self.test_dataset = Subset(dataset, test_indices)
         self.val_dataset = Subset(dataset, val_indices)
+
+        print(train_indices[:10])
 
     @staticmethod
     def collate(batch):
