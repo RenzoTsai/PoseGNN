@@ -33,23 +33,15 @@ class GraphSAGEModel(nn.Module):
         self.layers.append(dgl_conv.SAGEConv(n_hidden, out_dim, aggregator_type, feat_drop=dropout, activation=None))
 
     def forward(self, g, features):
+        # Node level embeddings
         h = features
         for layer in self.layers:
             h = layer(g, h)
-        # sum up the node embeddings and output a single graph-level prediction
+
+        # Graph level embedding
         g.ndata['h'] = h
         hg = dgl.mean_nodes(g, 'h')
+
+        # Apply softmax activation to output layer
+        hg = F.softmax(hg, dim=1)
         return hg
-
-
-class GraphClassificationModel(nn.Module):
-    def __init__(self, in_feats, n_hidden, out_dim, n_layers, activation, dropout, aggregator_type):
-        super(GraphClassificationModel, self).__init__()
-        self.sage = GraphSAGEModel(in_feats, n_hidden, out_dim, n_layers, activation, dropout, aggregator_type)
-        self.fc = nn.Linear(out_dim, 1)
-
-    def forward(self, g, features):
-        h = self.sage(g, features)
-        h = dgl.mean_nodes(h, 'h')
-        out = self.fc(h)
-        return out.squeeze()

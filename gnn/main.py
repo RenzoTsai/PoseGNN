@@ -5,7 +5,7 @@ import torch.nn.functional as F
 from torch.optim import Adam
 from torch.nn import CrossEntropyLoss
 
-from models import GraphSAGEModel, GraphClassificationModel
+from models import GraphSAGEModel
 
 from dataloader import *
 from dgldataset import HandGestureDataset
