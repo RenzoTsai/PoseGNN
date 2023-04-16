@@ -32,21 +32,14 @@ class HandGestureDataLoader:
         split_1 = int(np.floor(self.test_split * dataset_size))
         split_2 = int(np.floor(self.val_split * dataset_size))
 
-        test_indices, val_indices, train_indices = random_indices[:split_1], \
+        self.test_indices, self.val_indices, self.train_indices = random_indices[:split_1], \
             random_indices[split_1:(split_1+split_2)], \
             random_indices[(split_1+split_2):]
 
         # Define the sample for each set
-        self.train_dataset = Subset(dataset, train_indices)
-        self.test_dataset = Subset(dataset, test_indices)
-        self.val_dataset = Subset(dataset, val_indices)
-
-        # Modify the node feature dimensionality for batched graphs
-        for g in self.dataset.graphs:
-            num_nodes = g.ndata['feat'].shape[0]
-            num_node_features = g.ndata['feat'].shape[1]
-            # g.ndata['feat'] = g.ndata['feat'].view(-1, num_nodes*num_node_features)
-            # g.ndata['feat'] = g.ndata['feat'].transpose(0, 1).reshape(num_nodes * num_node_features, -1)
+        self.train_dataset = Subset(dataset, self.train_indices)
+        self.test_dataset = Subset(dataset, self.test_indices)
+        self.val_dataset = Subset(dataset, self.val_indices)
 
     @staticmethod
     def collate(batch):
@@ -56,10 +49,11 @@ class HandGestureDataLoader:
         return batched_graph, batched_labels
 
     def get_train_loader(self):
-        return DataLoader(self.train_dataset, batch_size=self.batch_size, shuffle=self.shuffle, collate_fn=self.collate)
+        # Ref: https://docs.dgl.ai/en/1.0.x/generated/dgl.dataloading.GraphDataLoader.html
+        return dgl.dataloading.GraphDataLoader(self.train_dataset, batch_size=32, shuffle=self.shuffle, drop_last=False)
 
     def get_test_loader(self):
-        return DataLoader(self.test_dataset, batch_size=self.batch_size, shuffle=False, collate_fn=self.collate)
+        return dgl.dataloading.GraphDataLoader(self.test_dataset, batch_size=32, shuffle=False, drop_last=False)
 
     def get_val_loader(self):
-        return DataLoader(self.val_dataset, batch_size=self.batch_size, shuffle=False, collate_fn=self.collate)
+        return dgl.dataloading.GraphDataLoader(self.val_dataset, batch_size=32, shuffle=False, drop_last=False)
