@@ -9,7 +9,6 @@ from models import GraphSAGEModel
 
 from dataloader import *
 from dgldataset import HandGestureDataset
-from utils import accuracy, test
 
 from dgl.data import citegrh
 
@@ -36,12 +35,12 @@ if __name__ == '__main__':
     criterion = CrossEntropyLoss()
 
     # Train the model
-    epochs = 100
+    epochs = 10
 
     for epoch in range(epochs):
         # Set model to the train mode
         model.train()
-
+        total_train_loss = 0.0
         # Train on batches
         for batch_idx, (bg, labels) in enumerate(train_loader):
             # Forward pass
@@ -50,15 +49,12 @@ if __name__ == '__main__':
 
             # Compute loss
             loss = criterion(logits, labels)
+            total_train_loss += loss.item()
 
             # Backward pass
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
-
-            # # Print training loss for every 10 iterations
-            # if batch_idx % 10 == 0:
-            #     print('Epoch {}, Iteration {}, loss {:.4f}'.format(epoch, batch_idx, loss.item()))
 
         # Evaluate on validation set
         model.eval()
@@ -78,15 +74,15 @@ if __name__ == '__main__':
                 # Compute accuracy
                 predicted = torch.argmax(logits, dim=1)
                 true_labels = torch.argmax(labels, dim=1)
-                total_val_acc += (predicted == true_labels).sum().item()
+                # print(f'The predicted is: {predicted}, the true_label is: {true_labels}')
+                # print(f'The correct number was: {(predicted == true_labels).sum()}, the number of all candidates is: {len(true_labels)}')
+                total_val_acc += ((predicted == true_labels).sum()/len(true_labels)).item()
 
-                num_val_batches += 1
+            avg_val_loss = total_val_loss / len(val_loader)
+            avg_val_acc = total_val_acc / len(val_loader)
 
-            avg_val_loss = total_val_loss / num_val_batches
-            avg_val_acc = total_val_acc / len(hand_gesture_dataloader.val_indices)
-
-            print('Epoch {}, Validation Loss {:.4f}, Validation Accuracy {:.4f}'.format(epoch, avg_val_loss,
-                                                                                        avg_val_acc))
+            # Print training and validation loss for the epoch
+            print('Epoch {}, Train Loss {:.4f}, Val Loss {:.4f}, Val Accuracy {:.4f}'.format(epoch, total_train_loss / len(train_loader), avg_val_loss, avg_val_acc))
 
     # Evaluate on test set
     model.eval()
@@ -106,12 +102,10 @@ if __name__ == '__main__':
             # Compute accuracy
             predicted = torch.argmax(logits, dim=1)
             true_labels = torch.argmax(labels, dim=1)
-            total_test_acc += (predicted == true_labels).sum().item()
+            total_test_acc += ((predicted == true_labels).sum()/len(true_labels)).item()
 
-            num_test_batches += 1
-
-        avg_test_loss = total_test_loss / num_test_batches
-        avg_test_acc = total_test_acc / len(hand_gesture_dataloader.test_indices)
+        avg_test_loss = total_test_loss / len(test_loader)
+        avg_test_acc = total_test_acc / len(test_loader)
 
         print('Test Loss {:.4f}, Test Accuracy {:.4f}'.format(avg_test_loss, avg_test_acc))
 
