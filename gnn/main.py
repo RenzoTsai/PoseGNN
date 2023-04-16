@@ -5,7 +5,7 @@ import torch.nn.functional as F
 from torch.optim import Adam
 from torch.nn import CrossEntropyLoss
 
-from models import GraphSAGEModel
+from models import GraphSAGEModel, GINModel, GCNModel
 
 from dataloader import *
 from dgldataset import HandGestureDataset
@@ -114,10 +114,24 @@ if __name__ == '__main__':
     num_classes = hand_gesture_dataset.num_classes                  # Get the number of classes - 36
 
     # Create the model
-    graphsage = GraphSAGEModel(in_feats=num_node_features, n_hidden=32, out_dim=num_classes,
-                           n_layers=2, activation=F.relu, dropout=0.5, aggregator_type='gcn')
+    # # GraphSAGE model
+    # graphsage = GraphSAGEModel(in_feats=num_node_features, n_hidden=32, out_dim=num_classes,
+    #                            n_layers=5, activation=F.relu, dropout=0.5, aggregator_type='gcn')
+    # # Train the model
+    # graphsage_trained_model = train(graphsage, train_loader, val_loader)
+    # # Test the model
+    # test(graphsage_trained_model, test_loader)
+    #
+    # # GIN model
+    # gin = GINModel(in_feats=num_node_features, n_hidden=32, out_dim=num_classes)
+    # # Train the model
+    # gin_trained_model = train(gin, train_loader, val_loader)
+    # # Test the model
+    # test(gin_trained_model, test_loader)
 
+    # GCN model
+    gcn = GCNModel(in_feats=num_node_features, n_hidden=32, out_dim=num_classes)
     # Train the model
-    graphsage_trained_model = train(graphsage, train_loader, val_loader)
+    gcn_trained_model = train(gcn, train_loader, val_loader)
     # Test the model
-    test(graphsage_trained_model, test_loader)
+    test(gcn_trained_model, test_loader)
