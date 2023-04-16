@@ -9,7 +9,7 @@ class HandGestureDataLoader:
     def __init__(
         self,
         dataset,
-        batch_size=32,
+        batch_size=10,
         test_split=0.2,
         val_split=0.2,
         shuffle=True,
@@ -50,10 +50,10 @@ class HandGestureDataLoader:
 
     def get_train_loader(self):
         # Ref: https://docs.dgl.ai/en/1.0.x/generated/dgl.dataloading.GraphDataLoader.html
-        return dgl.dataloading.GraphDataLoader(self.train_dataset, batch_size=32, shuffle=self.shuffle, drop_last=False)
+        return dgl.dataloading.GraphDataLoader(self.train_dataset, batch_size=self.batch_size, shuffle=self.shuffle, drop_last=False)
 
     def get_test_loader(self):
-        return dgl.dataloading.GraphDataLoader(self.test_dataset, batch_size=32, shuffle=False, drop_last=False)
+        return dgl.dataloading.GraphDataLoader(self.test_dataset, batch_size=self.batch_size, shuffle=False, drop_last=False)
 
     def get_val_loader(self):
-        return dgl.dataloading.GraphDataLoader(self.val_dataset, batch_size=32, shuffle=False, drop_last=False)
+        return dgl.dataloading.GraphDataLoader(self.val_dataset, batch_size=self.batch_size, shuffle=False, drop_last=False)
