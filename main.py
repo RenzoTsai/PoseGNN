@@ -4,7 +4,7 @@ from torch.nn import CrossEntropyLoss
 from gnn.models import GINModel, GAT_Net
 
 from gnn.dataloader import *
-from gnn.dgldataset import HandGestureDataset
+from gnn.dgldataset import HandGestureGraphDataset
 
 
 from gnn.dataloader import HandGestureDataLoader
@@ -99,7 +99,7 @@ def test(model, test_loader):
 if __name__ == '__main__':
 
     # Create the dgl dataset
-    hand_gesture_dataset = HandGestureDataset()
+    hand_gesture_dataset = HandGestureGraphDataset()
 
     # Define data loader
     hand_gesture_dataloader = HandGestureDataLoader(dataset=hand_gesture_dataset)

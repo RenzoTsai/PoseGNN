@@ -25,21 +25,33 @@ class HandGestureDataLoader:
         # Split dataset into train, test, and validation sets
         dataset_size = len(self.dataset)
 
-        # Generate a random permutation of indices
-        np.random.seed(random_seed)
-        random_indices = np.random.permutation(dataset_size)
+        # Get one-hot encoded labels for each sample
+        labels = [np.argmax(self.dataset[i][1]) for i in range(dataset_size)]
 
-        split_1 = int(np.floor(self.test_split * dataset_size))
-        split_2 = int(np.floor(self.val_split * dataset_size))
+        # Generate a random permutation of indices for each label
+        label_indices = [np.random.permutation(np.where(np.array(labels) == i)[0]) for i in range(len(set(labels)))]
 
-        self.test_indices, self.val_indices, self.train_indices = random_indices[:split_1], \
-            random_indices[split_1:(split_1+split_2)], \
-            random_indices[(split_1+split_2):]
+        # Split each label's indices into train, test, and validation sets
+        self.test_indices, self.val_indices, self.train_indices = [], [], []
+        for indices in label_indices:
+            split_1 = int(np.floor(test_split * len(indices)))
+            split_2 = int(np.floor(val_split * len(indices)))
+            self.test_indices.extend(indices[:split_1])
+            self.val_indices.extend(indices[split_1:(split_1+split_2)])
+            self.train_indices.extend(indices[(split_1+split_2):])
+
+        # Shuffle indices if requested
+        if shuffle:
+            np.random.seed(random_seed)
+            np.random.shuffle(self.test_indices)
+            np.random.shuffle(self.val_indices)
+            np.random.shuffle(self.train_indices)
 
         # Define the sample for each set
         self.train_dataset = Subset(dataset, self.train_indices)
         self.test_dataset = Subset(dataset, self.test_indices)
         self.val_dataset = Subset(dataset, self.val_indices)
+
 
     @staticmethod
     def collate(batch):

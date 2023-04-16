@@ -11,94 +11,25 @@ from dgl.nn.pytorch.conv import GINConv, GCN2Conv, GATConv
 from dgl.nn.pytorch.glob import SumPooling
 
 
-class GATLayer(nn.Module):
-
-    def __init__(self, input_dim, output_dim):
-        super(GATLayer, self).__init__()
-        self.output_dim = output_dim
-        self.W = nn.Linear(input_dim, output_dim, bias=True)
-        self.A = nn.Linear(2 * output_dim, 1, bias=True)
-        self.dropout = nn.Dropout(0.6)
-
-        self.relu = nn.LeakyReLU(0.2)
-        self.softmax = nn.Softmax(dim=1)
-        nn.init.xavier_normal_(self.W.weight, gain=nn.init.calculate_gain('relu'))
-        nn.init.xavier_normal_(self.A.weight, gain=nn.init.calculate_gain('relu'))
-
-    def message_func(self, edges):
-        Wh_j = edges.src['Wh']
-        Wh_i = edges.dst['Wh']
-        e_ij = self.A(torch.cat([Wh_i, Wh_j], dim=1))
-        e_ij = self.relu(e_ij)
-        return {'Wh_j': Wh_j, 'e_ij': e_ij}
-
-    def reduce_func(self, nodes):
-        e_ij = nodes.mailbox['e_ij']
-        alpha_ij = self.softmax(e_ij)
-        Wh_j = nodes.mailbox['Wh_j']
-        h = torch.sum(alpha_ij * Wh_j, dim=1)
-        return {'h': h}
+class GATModel(nn.Module):
+    def __init__(self, in_feats, hidden_feats, out_feats, num_heads):
+        super(GATModel, self).__init__()
+        self.conv1 = GATConv(in_feats, hidden_feats, num_heads=num_heads)
+        self.bn1 = nn.BatchNorm1d(hidden_feats * num_heads)
+        self.conv2 = GATConv(hidden_feats * num_heads, out_feats, num_heads=1)
+        self.bn2 = nn.BatchNorm1d(out_feats)
 
     def forward(self, g, h):
-        g.ndata['h'] = h
-        Wh = self.W(h)
-        g.ndata['Wh'] = Wh
-        g.update_all(self.message_func, self.reduce_func)
-        h = g.ndata['h']
-        return self.dropout(h)
-
-
-class MultiHeadGATLayer(nn.Module):
-    def __init__(self, input_dim, output_dim, num_heads, combination='cat'):
-        super(MultiHeadGATLayer, self).__init__()
-        self.combination = combination
-        self.heads = nn.ModuleList([GATLayer(input_dim, output_dim) for _ in range(num_heads)])
-
-    def forward(self, g, h):
-        head_outs = [head(g, h) for head in self.heads]
-        if self.combination == 'cat':
-            return torch.cat(head_outs, dim=1)
-        elif self.combination == 'avg':
-            return torch.mean(torch.stack(head_outs), dim=0)
-
-
-class GAT_Net(nn.Module):
-    def __init__(self, in_feats, n_classes, n_hidden=10, n_layers=2, n_heads=4, dropout=0.6):
-        super(GAT_Net, self).__init__()
-        input_dim = in_feats
-        hidden_dim = n_hidden
-        output_dim = n_classes
-        num_heads = n_heads
-        combination_method = 'cat'
-        L = n_layers
-        self.elu = nn.ELU()
-        self.softmax = nn.Softmax(dim=1)
-        self.dropout = nn.Dropout(dropout)
-        self.fc = nn.Linear(output_dim, n_classes)
-
-        self.layer_list = [MultiHeadGATLayer(input_dim, hidden_dim, num_heads, combination=combination_method)]
-        for i in range(1, L - 1):
-            self.layer_list.append(MultiHeadGATLayer(hidden_dim * num_heads, hidden_dim, num_heads,
-                                                     combination=combination_method))
-        self.layer_list.append(MultiHeadGATLayer(hidden_dim * num_heads, output_dim, num_heads,
-                                                 combination='avg'))
-        self.MultiHeadGATlayers = nn.ModuleList(self.layer_list)
-
-    def forward(self, g, h):
-        for layer in self.MultiHeadGATlayers[:-1]:
-            h = self.dropout(h)
-            h = layer(g, h)
-            h = self.elu(h)
-        if len(self.MultiHeadGATlayers) > 1:
-            h = self.dropout(h)
-            h = self.MultiHeadGATlayers[-1](g, h)
-            h = self.softmax(h)
+        h = h
+        h = self.conv1(g, h).flatten(1)
+        h = self.bn1(h)
+        h = F.elu(h)
+        h = self.conv2(g, h).mean(1)
+        h = self.bn2(h)
         with g.local_scope():
             g.ndata['h'] = h
-            # Calculate graph representation by average readout.
             hg = dgl.mean_nodes(g, 'h')
-            return self.fc(hg)
-        # return h
+            return hg
 
 
 class GraphSAGEModel(nn.Module):
