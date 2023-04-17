@@ -41,7 +41,6 @@ class GraphSAGEModel(nn.Module):
                  activation,
                  dropout,
                  aggregator_type):
-        """ Ref https://github.com/dglai/WWW20-Hands-on-Tutorial/blob/master/_legacy/basic_apps/BasicTasks_pytorch.ipynb """
         super(GraphSAGEModel, self).__init__()
         self.activation_fn = activation
         self.n_hidden_layers = n_layers
@@ -74,8 +73,6 @@ class GraphSAGEModel(nn.Module):
 
 
 class MLP(nn.Module):
-    """Construct two-layer MLP-type aggreator for GIN model"""
-    """https://github.com/dmlc/dgl/blob/master/examples/pytorch/gin/train.py"""
 
     def __init__(self,
                  in_feats,
@@ -123,7 +120,7 @@ class GINModel(nn.Module):
         self.drop = nn.Dropout(0.5)
         self.pool = (
             SumPooling()
-        )  # change to mean readout (AvgPooling) on social network datasets
+        )
 
     def forward(self, g, h):
         # list of hidden representation at each layer (including the input layer)

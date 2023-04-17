@@ -1,4 +1,5 @@
 import os
+import platform
 
 from HandGestureDataset import HandGestureDataset
 
@@ -38,8 +39,16 @@ def load_dataset():
         number of nodes/vertices on each hand: 21
         number of features on each node: 3 (x, y, z)
     """
-    asl_dataset = HandGestureDataset()
-    asl_dataset = asl_dataset.load_dataset()
+    if platform.system() == "Windows":
+        # Get the path to the project directory
+        project_dir = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
+        # Load the dataset
+        pickle_path = os.path.join(project_dir, 'dataset', 'asl_dataset.pickle')
+        with open(pickle_path, 'rb') as f:
+            asl_dataset = pickle.load(f)
+    else:
+        asl_dataset = HandGestureDataset()
+        asl_dataset = asl_dataset.load_dataset()
     return asl_dataset
 
 
