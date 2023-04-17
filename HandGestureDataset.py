@@ -22,7 +22,11 @@ class HandGestureDataset:
         model_path = 'commons/hand_landmarker.task'
         base_options = mp.tasks.BaseOptions(model_asset_path=model_path)
         options = mp.tasks.vision.HandLandmarkerOptions(base_options=base_options,
-                                                        num_hands=1)
+                                                        num_hands=1,
+                                                        min_hand_detection_confidence=0.1,
+                                                        min_hand_presence_confidence=0.1,
+                                                        min_tracking_confidence=0.1,
+                                                        )
         self.detector = mp.tasks.vision.HandLandmarker.create_from_options(options)
 
     def get_joint_points(self, image_path):
@@ -56,14 +60,16 @@ class HandGestureDataset:
 
     def create_dataset(self):
         dataset = HandGestureDataset()
-        root_dir = "dataset/asl_dataset"
+        root_dir = os.path.join("dataset", "asl_dataset")
         asl_dataset = dataset.load_dataset_from_image(root_dir)
 
-        with open('dataset/asl_dataset.pickle', 'wb') as f:
+        save_path = os.path.join("dataset", "asl_dataset.pickle")
+
+        with open(save_path) as f:
             pickle.dump(asl_dataset, f)
 
     def load_dataset(self):
-        pickle_path = 'dataset/asl_dataset.pickle'
+        pickle_path = os.path.join('dataset', 'asl_dataset.pickle')
         if not os.path.isfile(pickle_path):
             self.create_dataset()
 
