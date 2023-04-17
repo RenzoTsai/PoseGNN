@@ -12,20 +12,33 @@ from dgl.nn.pytorch.glob import SumPooling
 
 
 class GATModel(nn.Module):
-    def __init__(self, in_feats, hidden_feats, out_feats, num_heads):
+    def __init__(self, in_feats, hidden_feats, out_feats, num_heads, n_layers):
         super(GATModel, self).__init__()
-        self.conv1 = GATConv(in_feats, hidden_feats, num_heads=num_heads)
-        self.bn1 = nn.BatchNorm1d(hidden_feats * num_heads)
-        self.conv2 = GATConv(hidden_feats * num_heads, out_feats, num_heads=1)
-        self.bn2 = nn.BatchNorm1d(out_feats)
+        self.conv_layers = nn.ModuleList()
+        self.bn_layers = nn.ModuleList()
+        self.n_layers = n_layers
+
+        self.conv_layers.append(GATConv(in_feats, hidden_feats, num_heads=num_heads, residual=True))
+        self.bn_layers.append(nn.BatchNorm1d(hidden_feats * num_heads))
+
+        for i in range(1, n_layers - 1):
+            self.conv_layers.append(GATConv(hidden_feats * num_heads, hidden_feats, num_heads=num_heads, residual=True))
+            self.bn_layers.append(nn.BatchNorm1d(hidden_feats * num_heads))
+
+        self.conv_layers.append(GATConv(hidden_feats * num_heads, out_feats, num_heads=6))
+        self.bn_layers.append(nn.BatchNorm1d(out_feats))
 
     def forward(self, g, h):
         h = h
-        h = self.conv1(g, h).flatten(1)
-        h = self.bn1(h)
-        h = F.elu(h)
-        h = self.conv2(g, h).mean(1)
-        h = self.bn2(h)
+
+        for i in range(self.n_layers - 1):
+            h = self.conv_layers[i](g, h).flatten(1)
+            h = self.bn_layers[i](h)
+            h = F.elu(h)
+
+        h = self.conv_layers[self.n_layers - 1](g, h).mean(1)
+        h = self.bn_layers[self.n_layers - 1](h)
+
         with g.local_scope():
             g.ndata['h'] = h
             hg = dgl.mean_nodes(g, 'h')
@@ -73,7 +86,6 @@ class GraphSAGEModel(nn.Module):
 
 
 class MLP(nn.Module):
-
     def __init__(self,
                  in_feats,
                  n_hidden,
@@ -83,7 +95,12 @@ class MLP(nn.Module):
         # two-layer MLP
         self.linears.append(nn.Linear(in_feats, n_hidden, bias=False))
         self.linears.append(nn.Linear(n_hidden, out_dim, bias=False))
-        self.batch_norm = nn.BatchNorm1d((n_hidden))
+        self.xaiver_init()
+        self.batch_norm = nn.BatchNorm1d(n_hidden)
+
+    def xaiver_init(self):
+        for layer in self.linears:
+            nn.init.xavier_uniform_(layer.weight)
 
     def forward(self, x):
         h = x
@@ -136,6 +153,3 @@ class GINModel(nn.Module):
             pooled_h = self.pool(g, h)
             score_over_layer += self.drop(self.linear_prediction[i](pooled_h))
         return score_over_layer
-
-
-

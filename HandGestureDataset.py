@@ -60,14 +60,16 @@ class HandGestureDataset:
 
     def create_dataset(self):
         dataset = HandGestureDataset()
-        root_dir = "dataset/asl_dataset"
+        root_dir = os.path.join("dataset", "asl_dataset")
         asl_dataset = dataset.load_dataset_from_image(root_dir)
 
-        with open('dataset/asl_dataset.pickle', 'wb') as f:
+        save_path = os.path.join("dataset", "asl_dataset.pickle")
+
+        with open(save_path) as f:
             pickle.dump(asl_dataset, f)
 
     def load_dataset(self):
-        pickle_path = 'dataset/asl_dataset.pickle'
+        pickle_path = os.path.join('dataset', 'asl_dataset.pickle')
         if not os.path.isfile(pickle_path):
             self.create_dataset()
 

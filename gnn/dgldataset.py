@@ -1,11 +1,9 @@
 import os
-import platform
 
 from HandGestureDataset import HandGestureDataset
 
 os.environ['DGLBACKEND'] = 'pytorch'
 import numpy as np
-import pickle
 import torch
 
 import dgl
@@ -34,21 +32,13 @@ LABELS = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 
 def load_dataset():
     """
     Dataset:
-        number of graphs / images: 1619
+        number of graphs / images: 2088
         number of columns: 2 - nodes (21) and labels (1)?
         number of nodes/vertices on each hand: 21
         number of features on each node: 3 (x, y, z)
     """
-    if platform.system() == "Windows":
-        # Get the path to the project directory
-        project_dir = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
-        # Load the dataset
-        pickle_path = os.path.join(project_dir, 'dataset', 'asl_dataset.pickle')
-        with open(pickle_path, 'rb') as f:
-            asl_dataset = pickle.load(f)
-    else:
-        asl_dataset = HandGestureDataset()
-        asl_dataset = asl_dataset.load_dataset()
+    asl_dataset = HandGestureDataset()
+    asl_dataset = asl_dataset.load_dataset()
     return asl_dataset
 
 
